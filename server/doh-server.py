@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 
-from quart import Quart
+from quart import Quart, abort, request
 
 app = Quart(__name__)
 
-@app.route('/dns')
+@app.route('/dns', methods=['GET', 'POST'])
 async def dns():
-    return 'test'
+    if request.method == 'GET':
+        return 'GET'
+    elif request.method == 'POST':
+        return 'POST'
+    else:
+        abort(405)
 
 
 if __name__ == '__main__':
