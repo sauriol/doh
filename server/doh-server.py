@@ -36,7 +36,7 @@ async def serve():
 
         # Once request is extracted, base64 decode
         pad = '=' * (-len(req) % 4)
-        req = base64.urlsafe_b64decode(dns + pad)
+        req = base64.urlsafe_b64decode(req + pad)
     else:
         abort(405)
 
@@ -74,5 +74,5 @@ if __name__ == '__main__':
         host='localhost',
         port=8080,
         certfile='cert.pem',
-        keyfile='key.pem')
+        keyfile='key.pem'
         )
