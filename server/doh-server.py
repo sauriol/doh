@@ -27,6 +27,8 @@ logging.getLogger('hpack.hpack').setLevel(logging.ERROR)
 parser = argparse.ArgumentParser()
 parser.add_argument('--zone-file', dest='filename', default=None,
                     metavar='filename', type=str)
+parser.add_argument('--resolver', dest='resolver', default='8.8.8.8', type=str,
+                    help='Resolver to use if not resolving from a zone file')
 
 args = parser.parse_args()
 
@@ -101,7 +103,7 @@ async def serve():
     else:
         # Resolve by querying a configured server
         # TODO: add option to configure the server it queries
-        resp = dns.query.udp(message, '8.8.8.8')
+        resp = dns.query.udp(message, args.resolver)
 
         wire_resp = resp.to_wire()
 
