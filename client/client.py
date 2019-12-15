@@ -8,6 +8,7 @@ import base64
 
 
 def main():
+    # Parse the arguments
     parser = argparse.ArgumentParser(description='A basic DoH client')
     parser.add_argument('label', metavar='label', type=str,
                         help='The label to make the query for')
@@ -22,10 +23,11 @@ def main():
                         help='Ignore TLS/SSL issues')
     args = parser.parse_args()
 
+    # Build the response, using the values determined from the arguments
     resp = args.req(args.label, args.uri, args.type)
-
     message = dns.message.from_wire(resp)
 
+    # Print the message information
     print('Question:')
     for result in message.question:
         print('\t' + str(result))
@@ -43,18 +45,19 @@ def main():
         print('\t' + str(result))
 
 
+# Get the data with a GET request
 def get(label, uri, dnstype):
+    # Build the wire request
     rdtype = dns.rdatatype.from_text(dnstype)
     query = dns.message.make_query(label, rdtype)
     query.id = 0
     query_wire = query.to_wire()
 
+    # Build the query url
     query_url = base64.urlsafe_b64encode(query_wire)
-
     req_uri = uri + '?dns=' + query_url.decode('utf-8')
 
     resp = requests.get(req_uri)
-
     try:
         resp.raise_for_status()
     except requests.HTTPError as e:
@@ -65,14 +68,16 @@ def get(label, uri, dnstype):
         return resp.content
 
 
+# Get the data with a POST request
 def post(label, uri, dnstype):
+    # Build the wire request
     rdtype = dns.rdatatype.from_text(dnstype)
     query = dns.message.make_query(label, rdtype)
     query.id = 0
     query_wire = query.to_wire()
 
-    resp = requests.post(uri, data=query_wire, headers={'Content-Type': 'application/dns-message'})
-
+    resp = requests.post(uri, data=query_wire,
+                         headers={'Content-Type': 'application/dns-message'})
     try:
         resp.raise_for_status()
     except requests.HTTPError as e:

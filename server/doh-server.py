@@ -10,28 +10,23 @@ import os
 import argparse
 
 
-def file_is_valid(parser, filename):
-    if not os.path.exists(filename):
-        parser.error('File ' + filename + ' does not exist')
-    else:
-        return open(filename, 'r')
-
-
 app = Quart(__name__)
+
 allowed_content_types = ['application/dns-message']
 
+# Instantiate logger and disable some of the default quart logging
 logging.basicConfig(level=logging.DEBUG)
-
 logging.getLogger('hpack.hpack').setLevel(logging.ERROR)
 
+# Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--zone-file', dest='filename', default=None,
                     metavar='filename', type=str)
 parser.add_argument('--resolver', dest='resolver', default='8.8.8.8', type=str,
                     help='Resolver to use if not resolving from a zone file')
-
 args = parser.parse_args()
 
+# If a zone file has been passed, open it for reading
 if args.filename:
     zonefile = open(args.filename, 'r')
     zone = dns.zone.from_file(zonefile, args.filename)
@@ -40,6 +35,7 @@ if args.filename:
 @app.route('/dns', methods=['GET', 'POST'])
 async def serve():
     logging.debug(request.method + ' request received')
+
     if request.method == 'POST':
         # Extract the data from the post body
         if request.headers.get('Content-Type') not in allowed_content_types:
@@ -80,11 +76,9 @@ async def serve():
         logging.error('Received request with id ' + str(message.id))
 
     if args.filename:
-
-        print(message)
-
         answer_list = list()
 
+        # Search for responses in the zone file and build a list
         for query in message.question:
             querytype = query.rdtype
             queryname = query.name
@@ -92,22 +86,19 @@ async def serve():
 
             answer_list.append(data)
 
-        print(answer_list)
-
+        # Build the response and add the answers
         resp = dns.message.make_response(message)
-        #resp.answer = answer_list
         resp.answer = answer_list
 
+        # Convert to wire, passing the origin for appending to the names
         wire_resp = resp.to_wire(dns.zone.Zone(args.filename).origin)
 
     else:
         # Resolve by querying a configured server
-        # TODO: add option to configure the server it queries
         resp = dns.query.udp(message, args.resolver)
 
         wire_resp = resp.to_wire()
 
-    # TODO: query SOA instead of assuming default of 3600
     least_ttl = 3600
     for answer in resp.answer:
         if answer.ttl < least_ttl:
