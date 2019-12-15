@@ -45,9 +45,11 @@ def main():
 
 def get(label, uri, dnstype):
     rdtype = dns.rdatatype.from_text(dnstype)
-    query = dns.message.make_query(label, rdtype).to_wire()
+    query = dns.message.make_query(label, rdtype)
+    query.id = 0
+    query_wire = query.to_wire()
 
-    query_url = base64.urlsafe_b64encode(query)
+    query_url = base64.urlsafe_b64encode(query_wire)
 
     req_uri = uri + '?dns=' + query_url.decode('utf-8')
 
@@ -65,9 +67,11 @@ def get(label, uri, dnstype):
 
 def post(label, uri, dnstype):
     rdtype = dns.rdatatype.from_text(dnstype)
-    query = dns.message.make_query(label, rdtype).to_wire()
+    query = dns.message.make_query(label, rdtype)
+    query.id = 0
+    query_wire = query.to_wire()
 
-    resp = requests.post(uri, data=query, headers={'Content-Type': 'application/dns-message'})
+    resp = requests.post(uri, data=query_wire, headers={'Content-Type': 'application/dns-message'})
 
     try:
         resp.raise_for_status()
