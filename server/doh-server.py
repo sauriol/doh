@@ -4,7 +4,18 @@ import base64
 import logging
 from quart import Quart, abort, request, Response
 import dns.query
+import dns.zone
 import sys
+import os
+import argparse
+
+
+def file_is_valid(parser, filename):
+    if not os.path.exists(filename):
+        parser.error('File ' + filename + ' does not exist')
+    else:
+        return open(filename, 'r')
+
 
 app = Quart(__name__)
 allowed_content_types = ['application/dns-message']
@@ -12,6 +23,17 @@ allowed_content_types = ['application/dns-message']
 logging.basicConfig(level=logging.DEBUG)
 
 logging.getLogger('hpack.hpack').setLevel(logging.ERROR)
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--zone-file', dest='filename', default=None,
+                    metavar='filename', type=str)
+
+args = parser.parse_args()
+
+if args.filename:
+    zonefile = open(args.filename, 'r')
+    zone = dns.zone.from_file(zonefile, args.filename)
+
 
 @app.route('/dns', methods=['GET', 'POST'])
 async def serve():
@@ -55,15 +77,41 @@ async def serve():
     if message.id != 0:
         logging.error('Received request with id ' + str(message.id))
 
-    resp = dns.query.udp(message, '8.8.8.8')
+    if args.filename:
+
+        print(message)
+
+        answer_list = list()
+
+        for query in message.question:
+            querytype = query.rdtype
+            queryname = query.name
+            data = zone.find_rrset(queryname, querytype)
+
+            answer_list.append(data)
+
+        print(answer_list)
+
+        resp = dns.message.make_response(message)
+        #resp.answer = answer_list
+        resp.answer = answer_list
+
+        wire_resp = resp.to_wire(dns.zone.Zone(args.filename).origin)
+
+    else:
+        # Resolve by querying a configured server
+        # TODO: add option to configure the server it queries
+        resp = dns.query.udp(message, '8.8.8.8')
+
+        wire_resp = resp.to_wire()
 
     # TODO: query SOA instead of assuming default of 3600
     least_ttl = 3600
     for answer in resp.answer:
         if answer.ttl < least_ttl:
-            least_ttle = answer.ttl
+            least_ttl = answer.ttl
 
-    return Response(resp.to_wire(),
+    return Response(wire_resp,
                     status=200,
                     mimetype='application/dns-message',
                     headers={'Cache-Control': str(least_ttl)})
