@@ -1,2 +1,2 @@
 # doh
-DNS Over HTTPS for CSEC-462
+A simple DNS over HTTPS server and client written in Python
