@@ -27,22 +27,38 @@ def main():
     resp = args.req(args.label, args.uri, args.type)
     message = dns.message.from_wire(resp)
 
-    # Print the message information
-    print('Question:')
-    for result in message.question:
-        print('\t' + str(result))
+    # If NoError, print message info
+    if message.rcode() == 0:
+        print('Question:')
+        for result in message.question:
+            print('\t' + str(result))
 
-    print('\nAnswer:')
-    for result in message.answer:
-        print('\t' + str(result))
+        print('\nAnswer:')
+        for result in message.answer:
+            print('\t' + str(result))
 
-    print('\nAuthority:')
-    for result in message.authority:
-        print('\t' + str(result))
+        print('\nAuthority:')
+        for result in message.authority:
+            print('\t' + str(result))
 
-    print('\nAdditional:')
-    for result in message.additional:
-        print('\t' + str(result))
+        print('\nAdditional:')
+        for result in message.additional:
+            print('\t' + str(result))
+    elif message.rcode() == 3:
+        print('Got NXDOMAIN, label does not exist\n')
+        print('Question:')
+        for result in message.question:
+            print('\t' + str(result))
+
+        print('\nAuthority:')
+        for result in message.authority:
+            print('\t' + str(result))
+
+        print('\nAdditional:')
+        for result in message.additional:
+            print('\t' + str(result))
+    else:
+        print('Error, got rcode ' + str(message.rcode()))
 
 
 # Get the data with a GET request

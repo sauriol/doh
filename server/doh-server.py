@@ -82,13 +82,22 @@ async def serve():
         for query in message.question:
             querytype = query.rdtype
             queryname = query.name
-            data = zone.find_rrset(queryname, querytype)
+            try:
+                data = zone.find_rrset(queryname, querytype)
+            except KeyError:
+                break
 
             answer_list.append(data)
 
-        # Build the response and add the answers
+        # Build the response
         resp = dns.message.make_response(message)
-        resp.answer = answer_list
+
+        # If no answer found, return NXDOMAIN
+        if len(answer_list) == 0:
+            resp.set_rcode(3)
+        else:
+            # Add the answers to the response
+            resp.answer = answer_list
 
         # Convert to wire, passing the origin for appending to the names
         wire_resp = resp.to_wire(dns.zone.Zone(args.filename).origin)
@@ -96,6 +105,7 @@ async def serve():
     else:
         # Resolve by querying a configured server
         resp = dns.query.udp(message, args.resolver)
+        print(resp)
 
         wire_resp = resp.to_wire()
 
