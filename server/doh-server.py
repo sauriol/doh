@@ -8,7 +8,7 @@ import dns.zone
 import sys
 import os
 import argparse
-
+from signal import signal, SIGINT
 
 app = Quart(__name__)
 
@@ -31,6 +31,9 @@ if args.filename:
     zonefile = open(args.filename, 'r')
     zone = dns.zone.from_file(zonefile, args.filename)
 
+def handler(received, frame):
+    print('SIGINT received, exiting gracefully')
+    app.shutdown()
 
 @app.route('/dns', methods=['GET', 'POST'])
 async def serve():
@@ -121,6 +124,8 @@ async def serve():
 
 
 if __name__ == '__main__':
+    signal(SIGINT, handler)
+
     app.run(
         host='localhost',
         port=8080,
